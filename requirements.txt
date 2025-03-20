@@ -7,3 +7,4 @@ marshmallow-sqlalchemy
 itsdangerous
 PyMySQL
 cryptography
+python-dotenv
