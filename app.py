@@ -8,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_marshmallow import Marshmallow
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired
 import os
 
@@ -88,9 +89,10 @@ class Project(db.Model):
 # Marshmallow-Schemas für API
 # ---------------------------------------
 
-class ProjectSchema(ma.SQLAlchemyAutoSchema):
+class ProjectSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Project
+        sqla_session = db.session  # wichtig, damit Marshmallow weiß, welche Session verwendet wird
 
 # Initialisierung der Schemata für einzelne und mehrere Projekte
 project_schema = ProjectSchema()
