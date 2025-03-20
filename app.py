@@ -313,6 +313,12 @@ def reset_password(token):
 
     return render_template('reset_password.html', token=token)
 
+# Status DB, welche wird verwendet?
+@app.route('/db_status')
+def db_status():
+    return f"Aktuelle DB-Verbindung: {app.config['SQLALCHEMY_DATABASE_URI']}"
+
+
 # ---------------------------------------
 # Anwendung starten
 # ---------------------------------------
