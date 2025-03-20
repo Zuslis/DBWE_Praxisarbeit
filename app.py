@@ -24,6 +24,7 @@ app.config['SECRET_KEY'] = 'your_secret_key'  # Geheimschlüssel für Sessions u
 # ---------------------------------------
 
 MYSQL_USER = os.getenv('MYSQL_USER', 'praxisuser')
+MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
 MYSQL_DB = os.getenv('MYSQL_DB', 'praxisapp_db')
 
