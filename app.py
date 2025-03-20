@@ -316,8 +316,24 @@ def reset_password(token):
 # Status DB, welche wird verwendet?
 @app.route('/db_status')
 def db_status():
-    return f"Aktuelle DB-Verbindung: {app.config['SQLALCHEMY_DATABASE_URI']}"
+    db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+    if "mysql" in db_uri:
+        status = "MySQL wird verwendet ✅"
+    elif "sqlite" in db_uri:
+        status = "SQLite wird verwendet ⚠️"
+    else:
+        status = "Unbekannte Datenbank ❓"
 
+    return f"""
+        <html>
+        <head><title>Datenbank-Status</title></head>
+        <body>
+            <h1>Datenbank-Status</h1>
+            <p>{status}</p>
+            <p>Aktuelle Verbindung: {db_uri}</p>
+        </body>
+        </html>
+    """
 
 # ---------------------------------------
 # Anwendung starten
