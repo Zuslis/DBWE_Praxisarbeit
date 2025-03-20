@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+
+    <h2>Willkommen, {{ user.username }}</h2>
+
+    <!-- Logout-Link -->
+    <a href="{{ url_for('logout') }}">Logout</a>
+
+    <!-- Flash-Messages anzeigen -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Formular zum Hinzufügen eines neuen Projekts -->
+    <h3>Neues Projekt erstellen</h3>
+    <form method="POST" action="{{ url_for('add_project') }}">
+        <input type="text" name="name" placeholder="Projektname" required><br><br>
+        <textarea name="description" placeholder="Projektbeschreibung"></textarea><br><br>
+        <button type="submit">Projekt hinzufügen</button>
+    </form>
+
+    <!-- Liste der Projekte des Benutzers -->
+    <h3>Deine Projekte</h3>
+    {% if projects %}
+        <ul>
+            {% for project in projects %}
+            <li>
+                <strong>{{ project.name }}</strong>: {{ project.description }}
+                
+                <!-- Formular zum Löschen -->
+                <form method="POST" action="{{ url_for('delete_project', id=project.id) }}" style="display:inline;">
+                    <button type="submit">Löschen</button>
+                </form>
+        
+                <!-- Link zum Bearbeiten -->
+                <a href="{{ url_for('edit_project', id=project.id) }}">Bearbeiten</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Keine Projekte vorhanden. Füge oben eines hinzu!</p>
+    {% endif %}
+
+</body>
+</html>
