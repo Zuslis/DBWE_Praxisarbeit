@@ -6,3 +6,4 @@ Flask-Marshmallow
 marshmallow-sqlalchemy
 itsdangerous
 PyMySQL
+cryptography
