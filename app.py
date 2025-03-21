@@ -317,6 +317,8 @@ def reset_password(token):
 @app.route('/db_status')
 def db_status():
     db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+
+    # Bestimmen, welche Datenbank verwendet wird
     if "mysql" in db_uri:
         status = "MySQL wird verwendet ✅"
     elif "sqlite" in db_uri:
@@ -324,15 +326,15 @@ def db_status():
     else:
         status = "Unbekannte Datenbank ❓"
 
+    # HTML zurückgeben (ohne Verbindungs-Details!)
     return f"""
-        <html>
-        <head><title>Datenbank-Status</title></head>
-        <body>
-            <h1>Datenbank-Status</h1>
-            <p>{status}</p>
-            <p>Aktuelle Verbindung: {db_uri}</p>
-        </body>
-        </html>
+    <html>
+    <head><title>Datenbank-Status</title></head>
+    <body>
+        <h1>Datenbank-Status</h1>
+        <p>{status}</p>
+    </body>
+    </html>
     """
 
 # ---------------------------------------
