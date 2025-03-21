@@ -299,9 +299,9 @@ def reset_password(token):
 # ---------------------------------------
 
 @app.route('/db_status')
+@login_required  # Nur eingeloggte Benutzer haben Zugriff
 def db_status():
     db_uri = app.config['SQLALCHEMY_DATABASE_URI']
-
     if "mysql" in db_uri:
         status = "MySQL wird verwendet ✅"
     elif "sqlite" in db_uri:
