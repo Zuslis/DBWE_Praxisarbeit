@@ -69,16 +69,14 @@ s = URLSafeTimedSerializer(app.config['SECRET_KEY'])  # Erzeugt sichere Tokens (
 # Datenbank-Modelle
 # ---------------------------------------
 
-# Benutzer-Tabelle
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    projects = db.relationship('Project', backref='owner', lazy=True)  # Beziehung zu Projekten
+    projects = db.relationship('Project', backref='owner', lazy=True)
 
-# Projekt-Tabelle
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -92,9 +90,8 @@ class Project(db.Model):
 class ProjectSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Project
-        sqla_session = db.session  # wichtig, damit Marshmallow weiß, welche Session verwendet wird
+        sqla_session = db.session
 
-# Initialisierung der Schemata für einzelne und mehrere Projekte
 project_schema = ProjectSchema()
 projects_schema = ProjectSchema(many=True)
 
@@ -110,25 +107,21 @@ def load_user(user_id):
 # Routing der Webanwendung
 # ---------------------------------------
 
-# Startseite (leitet auf das Dashboard weiter)
 @app.route('/')
 def index():
     return redirect(url_for('dashboard'))
 
-# Registrierung neuer Benutzer
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
         password = bcrypt.generate_password_hash(request.form['password']).decode('utf-8')
-        
-        # Prüfen, ob Username oder Email bereits existieren
+
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash('Benutzername oder E-Mail existiert bereits!', 'danger')
             return redirect(url_for('register'))
-        
-        # Neuen User anlegen
+
         user = User(username=username, email=email, password=password)
         db.session.add(user)
         db.session.commit()
@@ -137,7 +130,6 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-# Benutzer-Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -147,14 +139,13 @@ def login():
 
         if user and bcrypt.check_password_hash(user.password, password):
             login_user(user)
-            session.pop('_flashes', None)  # Vorherige Flash-Meldungen löschen
+            session.pop('_flashes', None)
             flash('Erfolgreich eingeloggt.', 'success')
             return redirect(url_for('dashboard'))
 
         flash('Ungültige E-Mail oder Passwort!', 'danger')
     return render_template('login.html')
 
-# Benutzer-Logout
 @app.route('/logout')
 @login_required
 def logout():
@@ -162,15 +153,12 @@ def logout():
     flash('Erfolgreich ausgeloggt.', 'info')
     return redirect(url_for('login'))
 
-# Dashboard (Projekte anzeigen)
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Zeigt nur Projekte des eingeloggten Users an
     projects = Project.query.filter_by(user_id=current_user.id).all()
     return render_template('dashboard.html', projects=projects, user=current_user)
 
-# Projekt hinzufügen
 @app.route('/add_project', methods=['POST'])
 @login_required
 def add_project():
@@ -182,104 +170,96 @@ def add_project():
     flash('Projekt erfolgreich hinzugefügt!', 'success')
     return redirect(url_for('dashboard'))
 
-# Projekt löschen
 @app.route('/delete_project/<int:id>', methods=['POST'])
 @login_required
 def delete_project(id):
     project = Project.query.get_or_404(id)
-    # Sicherstellen, dass der aktuelle User der Besitzer ist
     if project.owner != current_user:
         flash('Nicht berechtigt, dieses Projekt zu löschen.', 'danger')
         return redirect(url_for('dashboard'))
+
     db.session.delete(project)
     db.session.commit()
     flash('Projekt gelöscht!', 'success')
     return redirect(url_for('dashboard'))
 
-# Projekt bearbeiten
 @app.route('/edit_project/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_project(id):
-    # Hole das Projekt anhand der ID, gib 404 zurück, wenn es nicht existiert
     project = Project.query.get_or_404(id)
-
-    # Prüfe, ob das aktuelle Projekt dem eingeloggten User gehört
     if project.owner != current_user:
         flash('Nicht berechtigt, dieses Projekt zu bearbeiten.', 'danger')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        # Hole die neuen Werte aus dem Formular
         project.name = request.form['name']
         project.description = request.form['description']
-
-        # Speichere die Änderungen in der Datenbank
         db.session.commit()
 
         flash('Projekt wurde erfolgreich aktualisiert.', 'success')
         return redirect(url_for('dashboard'))
 
-    # Wenn es sich um einen GET-Request handelt, zeige das Bearbeitungsformular
     return render_template('edit_project.html', project=project)
 
 # ---------------------------------------
-# RESTful API Endpunkte
+# RESTful API Endpunkte (KORRIGIERT!)
 # ---------------------------------------
 
-# Alle Projekte des aktuellen Users als JSON
 @app.route('/api/projects', methods=['GET'])
 @login_required
 def api_get_projects():
     projects = Project.query.filter_by(user_id=current_user.id).all()
-    return projects_schema.jsonify(projects)
+    return jsonify(projects_schema.dump(projects))
 
-# Ein einzelnes Projekt anzeigen
 @app.route('/api/projects/<int:id>', methods=['GET'])
 @login_required
 def api_get_project(id):
     project = Project.query.get_or_404(id)
     if project.owner != current_user:
         return jsonify({'error': 'Nicht berechtigt'}), 403
-    return project_schema.jsonify(project)
+    return jsonify(project_schema.dump(project))
 
-# Neues Projekt per API erstellen
 @app.route('/api/projects', methods=['POST'])
 @login_required
 def api_create_project():
     data = request.get_json()
     name = data.get('name')
     description = data.get('description')
+
     project = Project(name=name, description=description, user_id=current_user.id)
     db.session.add(project)
     db.session.commit()
-    return project_schema.jsonify(project), 201
 
-# Projekt per API aktualisieren
+    return jsonify(project_schema.dump(project)), 201
+
 @app.route('/api/projects/<int:id>', methods=['PUT'])
 @login_required
 def api_update_project(id):
     project = Project.query.get_or_404(id)
     if project.owner != current_user:
         return jsonify({'error': 'Nicht berechtigt'}), 403
+
     data = request.get_json()
     project.name = data.get('name', project.name)
     project.description = data.get('description', project.description)
     db.session.commit()
-    return project_schema.jsonify(project)
 
-# Projekt per API löschen
+    return jsonify(project_schema.dump(project))
+
 @app.route('/api/projects/<int:id>', methods=['DELETE'])
 @login_required
 def api_delete_project(id):
     project = Project.query.get_or_404(id)
     if project.owner != current_user:
         return jsonify({'error': 'Nicht berechtigt'}), 403
+
     db.session.delete(project)
     db.session.commit()
+
     return jsonify({'message': 'Projekt gelöscht'})
 
 # ---------------------------------------
-# Passwort-Zurücksetzen anfordern
+# Passwort-Zurücksetzen
 # ---------------------------------------
 
 @app.route('/reset_password_request', methods=['GET', 'POST'])
@@ -292,9 +272,9 @@ def reset_password_request():
             flash(f'Passwort-Reset-Link (Simulation): {url_for("reset_password", token=token, _external=True)}', 'info')
         else:
             flash('E-Mail wurde nicht gefunden.', 'danger')
+
     return render_template('reset_password_request.html')
 
-# Passwort-Zurücksetzen über Token
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
@@ -308,17 +288,20 @@ def reset_password(token):
         new_password = bcrypt.generate_password_hash(request.form['password']).decode('utf-8')
         user.password = new_password
         db.session.commit()
+
         flash('Passwort wurde zurückgesetzt. Bitte einloggen.', 'success')
         return redirect(url_for('login'))
 
     return render_template('reset_password.html', token=token)
 
-# Status DB, welche wird verwendet?
+# ---------------------------------------
+# DB-Status
+# ---------------------------------------
+
 @app.route('/db_status')
 def db_status():
     db_uri = app.config['SQLALCHEMY_DATABASE_URI']
 
-    # Bestimmen, welche Datenbank verwendet wird
     if "mysql" in db_uri:
         status = "MySQL wird verwendet ✅"
     elif "sqlite" in db_uri:
@@ -326,7 +309,6 @@ def db_status():
     else:
         status = "Unbekannte Datenbank ❓"
 
-    # HTML zurückgeben (ohne Verbindungs-Details!)
     return f"""
     <html>
     <head><title>Datenbank-Status</title></head>
@@ -343,5 +325,5 @@ def db_status():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Erstellt alle Tabellen, falls noch nicht vorhanden
-    app.run(debug=True)  # Startet den Flask-Entwicklungsserver
+        db.create_all()
+    app.run(debug=True)
